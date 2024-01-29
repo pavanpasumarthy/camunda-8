@@ -1,0 +1,242 @@
+
+services:
+
+  zeebe: # https://docs.camunda.io/docs/self-managed/platform-deployment/docker/#zeebe
+    image: camunda/zeebe:latest
+    container_name: zeebe
+    ports:
+      - "26500:26500"
+      - "9600:9600"
+    environment: # https://docs.camunda.io/docs/self-managed/zeebe-deployment/configuration/environment-variables/
+      - ZEEBE_BROKER_EXPORTERS_ELASTICSEARCH_CLASSNAME=io.camunda.zeebe.exporter.ElasticsearchExporter
+      - ZEEBE_BROKER_EXPORTERS_ELASTICSEARCH_ARGS_URL=http://elasticsearch:9200
+      - ZEEBE_BROKER_EXPORTERS_ELASTICSEARCH_ARGS_AUTHENTICATION_USERNAME=elastic
+      - ZEEBE_BROKER_EXPORTERS_ELASTICSEARCH_ARGS_AUTHENTICATION_PASSWORD=pavan
+      - ZEEBE_BROKER_EXPORTERS_ELASTICSEARCH_ARGS_BULK_SIZE=1
+      # allow running with low disk space
+      - ZEEBE_BROKER_DATA_DISKUSAGECOMMANDWATERMARK=0.998
+      - ZEEBE_BROKER_DATA_DISKUSAGEREPLICATIONWATERMARK=0.999
+      - "JAVA_TOOL_OPTIONS=-Xms512m -Xmx512m"
+    restart: always
+    volumes:
+      - zeebe:/usr/local/zeebe/data
+    networks:
+      - camunda-platform
+    depends_on:
+      - elasticsearch
+
+  operate: # https://docs.camunda.io/docs/self-managed/platform-deployment/docker/#operate
+    image: camunda/operate:latest
+    container_name: operate
+    ports:
+      - "8081:8080"
+    environment: # https://docs.camunda.io/docs/self-managed/operate-deployment/configuration/
+      - CAMUNDA_OPERATE_ZEEBE_GATEWAYADDRESS=zeebe:26500
+      - CAMUNDA_OPERATE_ELASTICSEARCH_URL=http://elasticsearch:9200
+      - CAMUNDA_OPERATE_ELASTICSEARCH_USERNAME=elastic
+      - CAMUNDA_OPERATE_ELASTICSEARCH_PASSWORD=pavan
+      - CAMUNDA_OPERATE_ZEEBEELASTICSEARCH_URL=http://elasticsearch:9200
+      - CAMUNDA_OPERATE_ZEEBEELASTICSEARCH_USERNAME=elastic
+      - CAMUNDA_OPERATE_ZEEBEELASTICSEARCH_PASSWORD=pavan
+      - CAMUNDA_OPERATE_archiver_ILM_ENABLED=true
+      - CAMUNDA_OPERATE_archiver_ILM_MIN_AGE_FOR_DELETE_ARCHIVED_INDICES=1d
+      # For more information regarding configuration with Identity see:
+      # https://docs.camunda.io/docs/self-managed/operate-deployment/authentication/#identity
+      - SPRING_PROFILES_ACTIVE=identity-auth
+      - CAMUNDA_OPERATE_IDENTITY_ISSUER_URL=http://localhost:18080/auth/realms/camunda-platform
+      - CAMUNDA_OPERATE_IDENTITY_ISSUER_BACKEND_URL=http://keycloak:8080/auth/realms/camunda-platform
+      - CAMUNDA_OPERATE_IDENTITY_CLIENTID=operate
+      - CAMUNDA_OPERATE_IDENTITY_CLIENTSECRET=XALaRPl5qwTEItdwCMiPS62nVpKs7dL7
+      - CAMUNDA_OPERATE_IDENTITY_AUDIENCE=operate-api
+    networks:
+      - camunda-platform
+      - identity-network
+    depends_on:
+      - zeebe
+      - identity
+      - elasticsearch
+
+  tasklist: # https://docs.camunda.io/docs/self-managed/platform-deployment/docker/#tasklist
+    image: camunda/tasklist:latest
+    container_name: tasklist
+    ports:
+      - "8082:8080"
+    environment: # https://docs.camunda.io/docs/self-managed/tasklist-deployment/configuration/
+      - CAMUNDA_TASKLIST_ZEEBE_GATEWAYADDRESS=zeebe:26500
+      - CAMUNDA_TASKLIST_ELASTICSEARCH_URL=http://elasticsearch:9200
+      - CAMUNDA_TASKLIST_ELASTICSEARCH_USERNAME=elastic
+      - CAMUNDA_TASKLIST_ELASTICSEARCH_PASSWORD=pavan
+      - CAMUNDA_TASKLIST_ZEEBEELASTICSEARCH_URL=http://elasticsearch:9200
+      - CAMUNDA_TASKLIST_ZEEBEELASTICSEARCH_USERNAME=elastic
+      - CAMUNDA_TASKLIST_ZEEBEELASTICSEARCH_PASSWORD=pavan
+      # For more information regarding configuration with Identity see:
+      # https://docs.camunda.io/docs/self-managed/tasklist-deployment/authentication/#identity
+      - CAMUNDA_TASKLIST_IDENTITY_BASEURL=http://identity:8084
+      - SPRING_PROFILES_ACTIVE=identity-auth
+      - CAMUNDA_TASKLIST_IDENTITY_ISSUER_URL=http://localhost:18080/auth/realms/camunda-platform
+      - CAMUNDA_TASKLIST_IDENTITY_ISSUER_BACKEND_URL=http://keycloak:8080/auth/realms/camunda-platform
+      - CAMUNDA_TASKLIST_IDENTITY_CLIENTID=tasklist
+      - CAMUNDA_TASKLIST_IDENTITY_CLIENTSECRET=XALaRPl5qwTEItdwCMiPS62nVpKs7dL7
+      - CAMUNDA_TASKLIST_IDENTITY_AUDIENCE=tasklist-api
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=http://${HOST}:18080/auth/realms/camunda-platform
+      - SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=http://${HOST}:18080/auth/realms/camunda-platform/protocol/openid-connect/certs
+      - CAMUNDA_TASKLIST_IDENTITY_RESOURCE_PERMISSIONS_ENABLED=false
+      - management.endpoints.web.exposure.include=health
+      - management.endpoint.health.probes.enabled=true
+    networks:
+      - camunda-platform
+      - identity-network
+    depends_on:
+      - zeebe
+      - identity
+      - elasticsearch
+
+  optimize: # https://docs.camunda.io/docs/self-managed/platform-deployment/docker/#optimize
+    image: camunda/optimize:latest
+    container_name: optimize
+    ports:
+      - "8083:8090"
+    environment: # https://docs.camunda.io/docs/self-managed/optimize-deployment/setup/installation/#available-environment-variables
+      - OPTIMIZE_ELASTICSEARCH_HOST=elasticsearch
+      - OPTIMIZE_ELASTICSEARCH_HTTP_PORT=9200
+      - CAMUNDA_OPTIMIZE_ELASTICSEARCH_SECURITY_USERNAME=elastic
+      - CAMUNDA_OPTIMIZE_ELASTICSEARCH_SECURITY_PASSWORD=pavan
+      - SPRING_PROFILES_ACTIVE=ccsm
+      - CAMUNDA_OPTIMIZE_ZEEBE_ENABLED=true
+      - CAMUNDA_OPTIMIZE_ENTERPRISE=false
+      - CAMUNDA_OPTIMIZE_IDENTITY_ISSUER_URL=http://localhost:18080/auth/realms/camunda-platform
+      - CAMUNDA_OPTIMIZE_IDENTITY_ISSUER_BACKEND_URL=http://keycloak:8080/auth/realms/camunda-platform
+      - CAMUNDA_OPTIMIZE_IDENTITY_CLIENTID=optimize
+      - CAMUNDA_OPTIMIZE_IDENTITY_CLIENTSECRET=XALaRPl5qwTEItdwCMiPS62nVpKs7dL7
+      - CAMUNDA_OPTIMIZE_IDENTITY_AUDIENCE=optimize-api
+      - CAMUNDA_OPTIMIZE_SECURITY_AUTH_COOKIE_SAME_SITE_ENABLED=false
+      - CAMUNDA_OPTIMIZE_UI_LOGOUT_HIDDEN=true
+      - management.endpoints.web.exposure.include=health
+      - management.endpoint.health.probes.enabled=true
+    restart: on-failure
+    networks:
+      - camunda-platform
+      - identity-network
+    depends_on:
+      - identity
+      - elasticsearch
+
+  identity: # https://docs.camunda.io/docs/self-managed/platform-deployment/docker/#identity
+    container_name: identity
+    image: camunda/identity:latest
+    ports:
+      - "8084:8084"
+    environment: # https://docs.camunda.io/docs/self-managed/identity/deployment/configuration-variables/
+      SERVER_PORT: 8084
+      KEYCLOAK_URL: http://keycloak:8080/auth
+      IDENTITY_AUTH_PROVIDER_BACKEND_URL: http://keycloak:8080/auth/realms/camunda-platform
+      KEYCLOAK_INIT_OPERATE_SECRET: XALaRPl5qwTEItdwCMiPS62nVpKs7dL7
+      KEYCLOAK_INIT_OPERATE_ROOT_URL: http://localhost:8081
+      KEYCLOAK_INIT_TASKLIST_SECRET: XALaRPl5qwTEItdwCMiPS62nVpKs7dL7
+      KEYCLOAK_INIT_TASKLIST_ROOT_URL: http://localhost:8082
+      KEYCLOAK_INIT_OPTIMIZE_SECRET: XALaRPl5qwTEItdwCMiPS62nVpKs7dL7
+      KEYCLOAK_INIT_OPTIMIZE_ROOT_URL: http://localhost:8083
+      IDENTITY_DATABASE_HOST: postgres
+      IDENTITY_DATABASE_PORT: 5432
+      IDENTITY_DATABASE_NAME: bitnami_keycloak
+      IDENTITY_DATABASE_USERNAME: bn_keycloak
+      IDENTITY_DATABASE_PASSWORD: "#3]O?4RGj)DE7Z!9SA5"
+      KEYCLOAK_USERS_0_USERNAME: "demo"
+      KEYCLOAK_USERS_0_PASSWORD: "demo"
+      KEYCLOAK_USERS_0_FIRST_NAME: "demo"
+      KEYCLOAK_USERS_0_ROLES_0: "Identity"
+      KEYCLOAK_USERS_0_ROLES_1: "Optimize"
+      KEYCLOAK_USERS_0_ROLES_2: "Operate"
+      KEYCLOAK_USERS_0_ROLES_3: "Tasklist"
+    restart: on-failure
+    networks:
+      - identity-network
+    depends_on:
+      - keycloak
+
+  keycloak: # https://hub.docker.com/r/jboss/keycloak
+    container_name: keycloak
+    image:  bitnami/keycloak:21.1.2
+    ports:
+      - "18080:8080"
+    environment:
+      KEYCLOAK_HTTP_RELATIVE_PATH: /auth
+      KEYCLOAK_DATABASE_HOST: postgres
+      KEYCLOAK_DATABASE_PASSWORD: "#3]O?4RGj)DE7Z!9SA5"
+      KEYCLOAK_ADMIN_USER: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    networks:
+      - identity-network
+    depends_on:
+      - postgres
+
+
+  postgres: # https://hub.docker.com/_/postgres
+    container_name: postgres
+    image: postgres:14.5-alpine
+    environment:
+      POSTGRES_DB: bitnami_keycloak
+      POSTGRES_USER: bn_keycloak
+      POSTGRES_PASSWORD: "#3]O?4RGj)DE7Z!9SA5"
+    restart: on-failure
+    ports:
+    - "6767:5432" 
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres:/var/lib/postgresql/data
+    networks:
+      - identity-network
+
+  elasticsearch: # https://hub.docker.com/_/elasticsearch
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELASTIC_VERSION:-7.17.0}
+    container_name: elasticsearch
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      - bootstrap.memory_lock=true
+      - discovery.type=single-node
+      # allow running with low disk space
+      - cluster.routing.allocation.disk.threshold_enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - xpack.security.enabled=true  # Enable built-in security features
+      - ELASTIC_PASSWORD=pavan
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    restart: always
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:9200/_cat/health | grep -q green" ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    volumes:
+      - elastic:/usr/share/elasticsearch/data
+    networks:
+      - camunda-platform
+  # javabpm:
+  #   build: .
+  #   ports:
+  #     - "7878:7878"
+  #   environment:
+  #     - ZEEBE_CLIENT_BROKER_GATEWAY_ADDRESS=zeebe:26500
+  #     - ZEEBE_CLIENT_SECURITY_PLAINTEXT=true
+  #   networks:
+  #     - camunda-platform
+      
+volumes:
+  zeebe:
+  elastic:
+  # javabpm:
+  postgres:
+
+networks:
+  # Note there are two bridge networks: One for Camunda Platform and one for Identity.
+  # Operate, Tasklist, and Optimize use both
+  camunda-platform:
+  identity-network:

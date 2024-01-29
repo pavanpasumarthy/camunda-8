@@ -1,0 +1,24 @@
+{
+  "components": [
+    {
+      "label": "loan disbursment",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_1yfmdg1",
+        "columns": null
+      },
+      "id": "Field_1vrkt99",
+      "key": "loanDisbursment",
+      "description": "manager can ovveride"
+    }
+  ],
+  "type": "default",
+  "id": "LoanDisbursment",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.3.0",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.17.0"
+  },
+  "schemaVersion": 12
+}

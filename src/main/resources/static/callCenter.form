@@ -1,0 +1,59 @@
+{
+  "components": [
+    {
+      "label": "loan Required",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_1mtqejz",
+        "columns": null
+      },
+      "id": "Field_1kl40ju",
+      "key": "loanRequired",
+      "description": "loan required",
+      "defaultValue": "1.2"
+    },
+    {
+      "label": "salaray perMonth",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_17sdp4o",
+        "columns": null
+      },
+      "id": "Field_1tkrllc",
+      "key": "salary",
+      "description": "salary Per Month"
+    },
+    {
+      "label": "creditScore",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_1o9pqp6",
+        "columns": null
+      },
+      "id": "Field_1x6wack",
+      "key": "creditScore",
+      "description": "credit score of Customer"
+    },
+    {
+      "label": "manualOverride",
+      "type": "textfield",
+      "layout": {
+        "row": "Row_1xfjgw4",
+        "columns": null
+      },
+      "id": "Field_1vz3p7t",
+      "key": "overideByManager",
+      "description": "manual ovveriding limit",
+      "defaultValue": "false"
+    }
+  ],
+  "type": "default",
+  "id": "callcenter",
+  "executionPlatform": "Camunda Cloud",
+  "executionPlatformVersion": "8.3.0",
+  "exporter": {
+    "name": "Camunda Modeler",
+    "version": "5.17.0"
+  },
+  "schemaVersion": 12
+}
